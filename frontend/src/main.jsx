@@ -86,10 +86,7 @@ background: #080b12;
 color: #f4f7fb;
 }
 
-```
-  * {
-    box-sizing: border-box;
-  }
+
 
   body {
     margin: 0;
