@@ -1,3 +1,15 @@
+import React, { useState } from "react";
+import ReactDOM from "react-dom/client";
+import "./style.css";
+
+import { WagmiProvider } from "wagmi";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { AppKitButton } from "@reown/appkit/react";
+
+import { wagmiAdapter, queryClient } from "./walletConfig";
+
+
+// ဒီနေရာမှာ LiveMarketChart function ကို ထည့်ပါ
 function LiveMarketChart({ symbol = "BTCUSDT" }) {
   const [prices, setPrices] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -83,7 +95,8 @@ function LiveMarketChart({ symbol = "BTCUSDT" }) {
     .map((item, index) => {
       const x =
         padding +
-        (index / (prices.length - 1)) * (width - padding * 2);
+        (index / (prices.length - 1)) *
+          (width - padding * 2);
 
       const y =
         height -
@@ -97,15 +110,18 @@ function LiveMarketChart({ symbol = "BTCUSDT" }) {
 
   const firstPrice = values[0];
   const lastPrice = values[values.length - 1];
+
   const changePercent =
     ((lastPrice - firstPrice) / firstPrice) * 100;
 
-  const lineColor = changePercent >= 0 ? "#22c55e" : "#ef4444";
+  const lineColor =
+    changePercent >= 0 ? "#22c55e" : "#ef4444";
 
   return (
     <div className="live-chart-wrapper">
       <div className="chart-top-info">
         <span>24H Market Movement</span>
+
         <strong style={{ color: lineColor }}>
           {changePercent >= 0 ? "+" : ""}
           {changePercent.toFixed(2)}%
@@ -119,7 +135,7 @@ function LiveMarketChart({ symbol = "BTCUSDT" }) {
       >
         <defs>
           <linearGradient
-            id="chartGradient"
+            id={`chartGradient-${symbol}`}
             x1="0"
             y1="0"
             x2="0"
@@ -130,6 +146,7 @@ function LiveMarketChart({ symbol = "BTCUSDT" }) {
               stopColor={lineColor}
               stopOpacity="0.25"
             />
+
             <stop
               offset="100%"
               stopColor={lineColor}
@@ -141,7 +158,8 @@ function LiveMarketChart({ symbol = "BTCUSDT" }) {
         {[0, 1, 2, 3, 4].map((line) => {
           const y =
             padding +
-            (line / 4) * (height - padding * 2);
+            (line / 4) *
+              (height - padding * 2);
 
           return (
             <line
@@ -161,7 +179,7 @@ function LiveMarketChart({ symbol = "BTCUSDT" }) {
           points={`${padding},${height - padding} ${points} ${
             width - padding
           },${height - padding}`}
-          fill="url(#chartGradient)"
+          fill={`url(#chartGradient-${symbol})`}
           stroke="none"
         />
 
@@ -176,18 +194,30 @@ function LiveMarketChart({ symbol = "BTCUSDT" }) {
       </svg>
 
       <div className="chart-footer">
-        <span>Low: ${minPrice.toLocaleString(undefined, {
-          maximumFractionDigits: 4,
-        })}</span>
+        <span>
+          Low: $
+          {minPrice.toLocaleString(undefined, {
+            maximumFractionDigits: 4,
+          })}
+        </span>
 
         <span>
           Live public market data · Updates every 60 seconds
         </span>
 
-        <span>High: ${maxPrice.toLocaleString(undefined, {
-          maximumFractionDigits: 4,
-        })}</span>
+        <span>
+          High: $
+          {maxPrice.toLocaleString(undefined, {
+            maximumFractionDigits: 4,
+          })}
+        </span>
       </div>
     </div>
   );
+}
+
+
+// ဒီအောက်မှာ မင်းရဲ့ App function ရှိရမယ်
+function App() {
+  // မင်းရဲ့ လက်ရှိ App code
 }
