@@ -1,649 +1,891 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./style.css";
 
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, useAccount, useBalance } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { AppKitButton } from "@reown/appkit/react";
 
 import { wagmiAdapter, queryClient } from "./walletConfig";
 
-const marketData = [
+const API_BASE = "https://api.binance.com/api/v3";
+
+const markets = [
   {
+    symbol: "BTCUSDT",
+    pair: "BTC / USDT",
     name: "Bitcoin",
-    symbol: "BTC",
-    price: 64250.45,
-    change: "+2.84%",
+    short: "BTC",
     icon: "₿",
   },
   {
+    symbol: "ETHUSDT",
+    pair: "ETH / USDT",
     name: "Ethereum",
-    symbol: "ETH",
-    price: 3425.8,
-    change: "+1.62%",
+    short: "ETH",
     icon: "Ξ",
   },
   {
-    name: "Tether",
-    symbol: "USDT",
-    price: 1,
-    change: "0.00%",
-    icon: "₮",
+    symbol: "SOLUSDT",
+    pair: "SOL / USDT",
+    name: "Solana",
+    short: "SOL",
+    icon: "S",
+  },
+  {
+    symbol: "BNBUSDT",
+    pair: "BNB / USDT",
+    name: "BNB",
+    short: "BNB",
+    icon: "◆",
   },
 ];
 
-function AuthModal({ onClose, onLogin }) {
-  const [mode, setMode] = useState("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  function submitForm(event) {
-    event.preventDefault();
-
-    if (!email || !password) {
-      alert("Please enter your email and password.");
-      return;
-    }
-
-    onLogin({
-      email,
-      name: email.split("@")[0],
-    });
+function formatNumber(value, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "—";
   }
 
-  return (
-    <div className="modal-overlay">
-      <div className="auth-modal">
-        <button className="close-button" onClick={onClose}>
-          ×
-        </button>
-
-        <h2>
-          {mode === "login" ? "Welcome back" : "Create your account"}
-        </h2>
-
-        <p>
-          {mode === "login"
-            ? "Sign in to view your portfolio and trading history."
-            : "Create an account to manage your demo portfolio."}
-        </p>
-
-        <form onSubmit={submitForm}>
-          <label>Email address</label>
-
-          <input
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-
-          <label>Password</label>
-
-          <input
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-
-          <button className="primary-button" type="submit">
-            {mode === "login" ? "Sign In" : "Create Account"}
-          </button>
-        </form>
-
-        <div className="auth-switch">
-          {mode === "login"
-            ? "Don't have an account?"
-            : "Already have an account?"}
-
-          <button
-            onClick={() =>
-              setMode(mode === "login" ? "register" : "login")
-            }
-          >
-            {mode === "login" ? "Create Account" : "Sign In"}
-          </button>
-        </div>
-
-        <small className="demo-note">
-          Demo account only. Do not enter real financial passwords.
-        </small>
-      </div>
-    </div>
-  );
+  return Number(value).toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
-function TradingPanel({ isLoggedIn, onOpenAuth, onTrade }) {
-  const [selectedMarket, setSelectedMarket] = useState(marketData[0]);
-  const [tradeType, setTradeType] = useState("buy");
-  const [amount, setAmount] = useState("");
-
-  function submitTrade(event) {
-    event.preventDefault();
-
-    if (!isLoggedIn) {
-      onOpenAuth();
-      return;
-    }
-
-    if (!amount || Number(amount) <= 0) {
-      alert("Please enter a valid amount.");
-      return;
-    }
-
-    onTrade({
-      type: tradeType,
-      symbol: selectedMarket.symbol,
-      amount: Number(amount),
-      price: selectedMarket.price,
-    });
-
-    setAmount("");
-  }
-
-  return (
-    <div className="trading-layout">
-      <div className="panel markets-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Markets</h2>
-            <p>Live-style demo market prices</p>
-          </div>
-        </div>
-
-        <div className="market-list">
-          {marketData.map((market) => (
-            <button
-              className={`market-item ${
-                selectedMarket.symbol === market.symbol ? "selected" : ""
-              }`}
-              key={market.symbol}
-              onClick={() => setSelectedMarket(market)}
-            >
-              <div className={`coin-icon ${market.symbol.toLowerCase()}`}>
-                {market.icon}
-              </div>
-
-              <div className="market-info">
-                <strong>{market.name}</strong>
-                <span>{market.symbol}</span>
-              </div>
-
-              <div className="market-price">
-                <strong>
-                  ${market.price.toLocaleString("en-US")}
-                </strong>
-                <span className="positive">{market.change}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="panel trade-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Trade {selectedMarket.symbol}</h2>
-            <p>Demo trading mode</p>
-          </div>
-
-          <span className="demo-badge">DEMO</span>
-        </div>
-
-        {!isLoggedIn ? (
-          <div className="login-required">
-            <div className="lock-icon">🔒</div>
-
-            <h3>Account required</h3>
-
-            <p>
-              Create an account or sign in to view your portfolio and start
-              demo trading.
-            </p>
-
-            <button className="primary-button" onClick={onOpenAuth}>
-              Create Account / Sign In
-            </button>
-          </div>
-        ) : (
-          <form className="trade-form" onSubmit={submitTrade}>
-            <div className="trade-tabs">
-              <button
-                type="button"
-                className={tradeType === "buy" ? "active buy-tab" : ""}
-                onClick={() => setTradeType("buy")}
-              >
-                Buy
-              </button>
-
-              <button
-                type="button"
-                className={tradeType === "sell" ? "active sell-tab" : ""}
-                onClick={() => setTradeType("sell")}
-              >
-                Sell
-              </button>
-            </div>
-
-            <div className="selected-asset">
-              <span>Asset</span>
-              <strong>
-                {selectedMarket.icon} {selectedMarket.name}
-              </strong>
-            </div>
-
-            <label>Amount in USD</label>
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Enter amount"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-
-            <div className="trade-summary">
-              <div>
-                <span>Market Price</span>
-                <strong>
-                  ${selectedMarket.price.toLocaleString("en-US")}
-                </strong>
-              </div>
-
-              <div>
-                <span>Estimated Fee</span>
-                <strong>0.25%</strong>
-              </div>
-            </div>
-
-            <button className="primary-button" type="submit">
-              {tradeType === "buy" ? "Review Buy Order" : "Review Sell Order"}
-            </button>
-
-            <small className="demo-note">
-              This is a simulated trade. No real funds are transferred.
-            </small>
-          </form>
-        )}
-      </div>
-    </div>
-  );
+function shortenAddress(address) {
+  if (!address) return "";
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
-  const [activePage, setActivePage] = useState("dashboard");
+  const [activePage, setActivePage] = useState("Trade");
+  const [selectedMarket, setSelectedMarket] = useState(markets[0]);
+  const [prices, setPrices] = useState({});
+  const [chartData, setChartData] = useState([]);
+  const [chartInterval, setChartInterval] = useState("1h");
+  const [isLoadingChart, setIsLoadingChart] = useState(true);
+  const [fromAmount, setFromAmount] = useState("");
+  const [toToken, setToToken] = useState("USDC");
+  const [swapMessage, setSwapMessage] = useState("");
 
-  const [demoBalance, setDemoBalance] = useState(24580.75);
+  const { address, isConnected, chain } = useAccount();
 
-  const [transactions, setTransactions] = useState([
-    {
-      name: "Demo Bitcoin Purchase",
-      type: "Buy",
-      amount: "$1,250.00",
-      date: "Today, 10:24 AM",
-    },
-    {
-      name: "Demo USDT Trade",
-      type: "Buy",
-      amount: "$850.00",
-      date: "Yesterday, 4:15 PM",
-    },
-  ]);
+  const { data: walletBalance } = useBalance({
+    address,
+  });
 
-  function handleLogin(user) {
-    setIsLoggedIn(true);
-    setShowAuth(false);
-    alert(`Welcome, ${user.name}`);
-  }
+  useEffect(() => {
+    let mounted = true;
 
-  function handleDemoTrade(trade) {
-    const tradeValue = trade.amount;
-    const fee = tradeValue * 0.0025;
+    async function loadPrices() {
+      try {
+        const response = await fetch(
+          `${API_BASE}/ticker/24hr?symbols=${encodeURIComponent(
+            JSON.stringify(markets.map((item) => item.symbol))
+          )}`
+        );
 
-    if (trade.type === "buy" && tradeValue + fee > demoBalance) {
-      alert("Insufficient demo balance.");
+        if (!response.ok) throw new Error("Unable to load market prices");
+
+        const data = await response.json();
+
+        if (!mounted) return;
+
+        const nextPrices = {};
+
+        data.forEach((item) => {
+          nextPrices[item.symbol] = {
+            price: Number(item.lastPrice),
+            change: Number(item.priceChangePercent),
+            volume: Number(item.quoteVolume),
+          };
+        });
+
+        setPrices(nextPrices);
+      } catch (error) {
+        console.error("Market price error:", error);
+      }
+    }
+
+    loadPrices();
+
+    const timer = setInterval(loadPrices, 10000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadChart() {
+      setIsLoadingChart(true);
+
+      try {
+        const response = await fetch(
+          `${API_BASE}/klines?symbol=${selectedMarket.symbol}&interval=${chartInterval}&limit=80`
+        );
+
+        if (!response.ok) throw new Error("Unable to load chart");
+
+        const data = await response.json();
+
+        if (!mounted) return;
+
+        const candles = data.map((item) => ({
+          time: item[0],
+          open: Number(item[1]),
+          high: Number(item[2]),
+          low: Number(item[3]),
+          close: Number(item[4]),
+          volume: Number(item[5]),
+        }));
+
+        setChartData(candles);
+      } catch (error) {
+        console.error("Chart error:", error);
+        setChartData([]);
+      } finally {
+        if (mounted) setIsLoadingChart(false);
+      }
+    }
+
+    loadChart();
+
+    const timer = setInterval(loadChart, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [selectedMarket, chartInterval]);
+
+  const selectedPrice = prices[selectedMarket.symbol]?.price ?? null;
+  const selectedChange = prices[selectedMarket.symbol]?.change ?? null;
+
+  const estimatedOutput = useMemo(() => {
+    if (!fromAmount || !selectedPrice) return null;
+
+    const amount = Number(fromAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+
+    return amount * selectedPrice;
+  }, [fromAmount, selectedPrice]);
+
+  function handleSwapReview() {
+    setSwapMessage("");
+
+    if (!isConnected) {
+      setSwapMessage("Connect your wallet before reviewing a swap.");
       return;
     }
 
-    if (trade.type === "buy") {
-      setDemoBalance((current) => current - tradeValue - fee);
-    } else {
-      setDemoBalance((current) => current + tradeValue - fee);
+    if (!fromAmount || Number(fromAmount) <= 0) {
+      setSwapMessage("Enter an amount to continue.");
+      return;
     }
 
-    setTransactions((current) => [
-      {
-        name: `Demo ${trade.type === "buy" ? "Purchase" : "Sale"} ${
-          trade.symbol
-        }`,
-        type: trade.type === "buy" ? "Buy" : "Sell",
-        amount: `$${tradeValue.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-        })}`,
-        date: "Just now",
-      },
-      ...current,
-    ]);
-
-    alert(
-      `Demo ${trade.type === "buy" ? "buy" : "sell"} order completed.\n\nNo real funds were transferred.`
+    setSwapMessage(
+      "Swap review is ready. DEX router integration must be connected before a blockchain transaction can be submitted."
     );
   }
 
   return (
-    <div className="dashboard">
+    <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-icon">N</div>
-          <span>Nova Wallet</span>
+          <div className="brand-mark">N</div>
+          <div>
+            <div className="brand-name">Nova</div>
+            <div className="brand-name">Wallet</div>
+          </div>
         </div>
 
-        <nav>
-          <button
-            className={`nav-item ${
-              activePage === "dashboard" ? "active" : ""
-            }`}
-            onClick={() => setActivePage("dashboard")}
-          >
-            <span>▦</span>
-            Dashboard
-          </button>
+        <div className="sidebar-section-title">Workspace</div>
 
-          <button
-            className={`nav-item ${
-              activePage === "trading" ? "active" : ""
-            }`}
-            onClick={() => setActivePage("trading")}
-          >
-            <span>↗</span>
-            Trading
-          </button>
+        <button
+          className={`side-link ${
+            activePage === "Trade" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("Trade")}
+        >
+          <span>▦</span>
+          Trade
+        </button>
 
-          <button
-            className={`nav-item ${
-              activePage === "wallets" ? "active" : ""
-            }`}
-            onClick={() => setActivePage("wallets")}
-          >
-            <span>▣</span>
-            My Wallets
-          </button>
+        <button
+          className={`side-link ${
+            activePage === "Markets" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("Markets")}
+        >
+          <span>⌁</span>
+          Markets
+        </button>
 
-          <button
-            className={`nav-item ${
-              activePage === "transactions" ? "active" : ""
-            }`}
-            onClick={() => setActivePage("transactions")}
-          >
-            <span>↔</span>
-            Transactions
-          </button>
-        </nav>
+        <button
+          className={`side-link ${
+            activePage === "Portfolio" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("Portfolio")}
+        >
+          <span>▣</span>
+          Portfolio
+        </button>
+
+        <button
+          className={`side-link ${
+            activePage === "Activity" ? "active" : ""
+          }`}
+          onClick={() => setActivePage("Activity")}
+        >
+          <span>↔</span>
+          Activity
+        </button>
 
         <div className="sidebar-bottom">
-          <button className="nav-item">
-            <span>⚙</span>
-            Settings
-          </button>
+          <div className="network-status">
+            <span className="status-dot"></span>
+            {chain?.name || "Wallet not connected"}
+          </div>
 
-          <button className="nav-item">
-            <span>?</span>
-            Help Center
-          </button>
-
-          <div className="profile">
-            <div className="avatar">
-              {isLoggedIn ? "YL" : "GU"}
-            </div>
-
-            <div>
-              <strong>{isLoggedIn ? "Yuyang" : "Guest User"}</strong>
-              <small>
-                {isLoggedIn ? "Demo Account" : "Not signed in"}
-              </small>
-            </div>
+          <div className="security-small">
+            Non-custodial wallet
+            <br />
+            Your keys remain yours
           </div>
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className="main-area">
         <header className="topbar">
-          <div>
-            <h1>
-              {isLoggedIn
-                ? "Welcome back, Yuyang 👋"
-                : "Welcome to Nova Wallet 👋"}
-            </h1>
-
-            <p>
-              {isLoggedIn
-                ? "Manage your demo portfolio and trading activity."
-                : "Explore markets and create an account to continue."}
-            </p>
+          <div className="page-heading">
+            <div className="eyebrow">DECENTRALIZED TRADING</div>
+            <h1>{activePage}</h1>
           </div>
 
-          <div className="top-actions">
-            <button className="icon-button">⌕</button>
-            <button className="icon-button">🔔</button>
+          <div className="topbar-actions">
+            <button className="icon-button" title="Search">
+              ⌕
+            </button>
 
-            {isLoggedIn ? (
-              <button
-                className="user-button"
-                onClick={() => setIsLoggedIn(false)}
-              >
-                <span className="avatar small">YL</span>
-                Yuyang
-              </button>
-            ) : (
-              <button
-                className="primary-button small-button"
-                onClick={() => setShowAuth(true)}
-              >
-                Sign In
-              </button>
-            )}
+            <button className="icon-button" title="Notifications">
+              ♢
+            </button>
 
             <AppKitButton />
           </div>
         </header>
 
-        {activePage === "trading" ? (
-          <section>
-            <div className="page-title">
-              <h2>Trading</h2>
-              <p>Buy and sell assets in demo mode.</p>
-            </div>
-
-            <TradingPanel
-              isLoggedIn={isLoggedIn}
-              onOpenAuth={() => setShowAuth(true)}
-              onTrade={handleDemoTrade}
-            />
-          </section>
-        ) : (
+        {activePage === "Trade" && (
           <>
-            <section className="balance-grid" id="dashboard">
-              <div className="balance-card">
-                <div className="card-header">
-                  <span>
-                    {isLoggedIn ? "Demo Portfolio Balance" : "Portfolio Balance"}
-                  </span>
-                  <span className="demo-badge">DEMO</span>
-                </div>
+            <section className="market-strip">
+              {markets.map((market) => {
+                const marketPrice = prices[market.symbol];
+                const isSelected =
+                  selectedMarket.symbol === market.symbol;
 
-                {isLoggedIn ? (
-                  <>
-                    <div className="balance-amount">
-                      $
-                      {demoBalance.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </div>
-
-                    <div className="balance-change">
-                      <span>↗ 12.8%</span>
-                      <small>Demo performance</small>
-                    </div>
-                  </>
-                ) : (
-                  <div className="hidden-balance">
-                    <div className="blurred-balance">$00,000.00</div>
-
-                    <p>
-                      Create an account or sign in to view your balance.
-                    </p>
-
-                    <button
-                      className="primary-button"
-                      onClick={() => setShowAuth(true)}
-                    >
-                      Create Account
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon purple">↗</div>
-                <div className="stat-title">Total Income</div>
-
-                {isLoggedIn ? (
-                  <div className="stat-value">$8,450.00</div>
-                ) : (
-                  <div className="private-value">••••••</div>
-                )}
-
-                <div className="stat-positive">
-                  ↗ 8.4% <span>vs last month</span>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon orange">↙</div>
-                <div className="stat-title">Total Expenses</div>
-
-                {isLoggedIn ? (
-                  <div className="stat-value">$3,250.50</div>
-                ) : (
-                  <div className="private-value">••••••</div>
-                )}
-
-                <div className="stat-negative">
-                  ↘ 3.2% <span>vs last month</span>
-                </div>
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>Market Overview</h2>
-                  <p>Explore available demo markets</p>
-                </div>
-
-                <button
-                  className="add-button"
-                  onClick={() => setActivePage("trading")}
-                >
-                  Start Trading →
-                </button>
-              </div>
-
-              <div className="market-overview">
-                {marketData.map((market) => (
-                  <div className="overview-card" key={market.symbol}>
-                    <div className="coin-icon">{market.icon}</div>
-                    <strong>{market.name}</strong>
-                    <span>{market.symbol}</span>
-                    <h3>
-                      ${market.price.toLocaleString("en-US")}
-                    </h3>
-                    <small className="positive">{market.change}</small>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="panel transactions-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>Recent Transactions</h2>
-                  <p>Your latest demo activity</p>
-                </div>
-
-                {!isLoggedIn && (
+                return (
                   <button
-                    className="view-all"
-                    onClick={() => setShowAuth(true)}
+                    key={market.symbol}
+                    className={`market-mini ${
+                      isSelected ? "selected" : ""
+                    }`}
+                    onClick={() => setSelectedMarket(market)}
                   >
-                    Sign in to view all →
-                  </button>
-                )}
-              </div>
+                    <div className="market-mini-top">
+                      <span className="coin-icon">{market.icon}</span>
+                      <span className="market-pair">
+                        {market.pair}
+                      </span>
+                    </div>
 
-              {isLoggedIn ? (
-                <div className="transaction-table">
-                  <div className="table-header">
-                    <span>Transaction</span>
-                    <span>Type</span>
-                    <span>Date</span>
-                    <span>Amount</span>
+                    <div className="market-mini-bottom">
+                      <strong>
+                        {formatNumber(marketPrice?.price, 2)}
+                      </strong>
+
+                      <span
+                        className={
+                          marketPrice?.change >= 0
+                            ? "positive"
+                            : "negative"
+                        }
+                      >
+                        {marketPrice
+                          ? `${marketPrice.change >= 0 ? "+" : ""}${formatNumber(
+                              marketPrice.change,
+                              2
+                            )}%`
+                          : "—"}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </section>
+
+            <section className="trading-layout">
+              <div className="chart-panel panel">
+                <div className="panel-header chart-header">
+                  <div>
+                    <div className="pair-title">
+                      <span className="large-coin-icon">
+                        {selectedMarket.icon}
+                      </span>
+                      <div>
+                        <h2>{selectedMarket.pair}</h2>
+                        <div className="pair-subtitle">
+                          {selectedMarket.name}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  {transactions.map((transaction, index) => (
-                    <div className="transaction-row" key={index}>
-                      <strong>{transaction.name}</strong>
-                      <span className="type income">
-                        {transaction.type}
-                      </span>
-                      <span className="transaction-date">
-                        {transaction.date}
-                      </span>
-                      <strong>{transaction.amount}</strong>
+                  <div className="selected-price">
+                    <strong>
+                      {selectedPrice
+                        ? `$${formatNumber(selectedPrice, 2)}`
+                        : "—"}
+                    </strong>
+
+                    <span
+                      className={
+                        selectedChange >= 0
+                          ? "positive"
+                          : "negative"
+                      }
+                    >
+                      {selectedChange !== null
+                        ? `${selectedChange >= 0 ? "+" : ""}${formatNumber(
+                            selectedChange,
+                            2
+                          )}%`
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="chart-toolbar">
+                  <div className="timeframes">
+                    {["15m", "1h", "4h", "1d", "1w"].map(
+                      (interval) => (
+                        <button
+                          key={interval}
+                          className={
+                            chartInterval === interval
+                              ? "timeframe active"
+                              : "timeframe"
+                          }
+                          onClick={() =>
+                            setChartInterval(interval)
+                          }
+                        >
+                          {interval}
+                        </button>
+                      )
+                    )}
+                  </div>
+
+                  <div className="chart-tools">
+                    <span>▥</span>
+                    <span>⌁</span>
+                    <span>⚙</span>
+                  </div>
+                </div>
+
+                <PriceChart
+                  data={chartData}
+                  isLoading={isLoadingChart}
+                />
+
+                <div className="chart-footer">
+                  <span>Market data provided by public market data API</span>
+                  <span>Live updates</span>
+                </div>
+              </div>
+
+              <SwapPanel
+                selectedMarket={selectedMarket}
+                selectedPrice={selectedPrice}
+                selectedChange={selectedChange}
+                fromAmount={fromAmount}
+                setFromAmount={setFromAmount}
+                toToken={toToken}
+                setToToken={setToToken}
+                estimatedOutput={estimatedOutput}
+                isConnected={isConnected}
+                walletBalance={walletBalance}
+                onReview={handleSwapReview}
+                swapMessage={swapMessage}
+              />
+            </section>
+
+            <section className="bottom-grid">
+              <div className="panel orderbook-panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Order Book</h3>
+                    <span className="panel-caption">
+                      Market liquidity overview
+                    </span>
+                  </div>
+
+                  <span className="book-tabs">Depth</span>
+                </div>
+
+                <div className="orderbook-columns">
+                  <span>Price (USDT)</span>
+                  <span>Amount</span>
+                  <span>Total</span>
+                </div>
+
+                <div className="orderbook-rows">
+                  {[1, 2, 3, 4, 5].map((row) => (
+                    <div className="order-row sell-row" key={`s${row}`}>
+                      <span>{formatNumber(selectedPrice ? selectedPrice + row * 2.5 : null, 2)}</span>
+                      <span>{(0.012 * row).toFixed(4)}</span>
+                      <span>{selectedPrice ? formatNumber(selectedPrice * 0.012 * row, 2) : "—"}</span>
+                    </div>
+                  ))}
+
+                  <div className="spread-row">
+                    <strong>
+                      {selectedPrice
+                        ? `$${formatNumber(selectedPrice, 2)}`
+                        : "—"}
+                    </strong>
+                    <span>Spread</span>
+                    <span>0.01%</span>
+                  </div>
+
+                  {[1, 2, 3, 4, 5].map((row) => (
+                    <div className="order-row buy-row" key={`b${row}`}>
+                      <span>{formatNumber(selectedPrice ? selectedPrice - row * 2.5 : null, 2)}</span>
+                      <span>{(0.018 * row).toFixed(4)}</span>
+                      <span>{selectedPrice ? formatNumber(selectedPrice * 0.018 * row, 2) : "—"}</span>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="private-section">
-                  <div className="lock-icon">🔒</div>
-                  <h3>Transactions are private</h3>
-                  <p>
-                    Create an account or sign in to view your transaction
-                    history.
-                  </p>
+              </div>
 
-                  <button
-                    className="primary-button"
-                    onClick={() => setShowAuth(true)}
-                  >
-                    Create Account / Sign In
-                  </button>
+              <div className="panel activity-panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Recent Activity</h3>
+                    <span className="panel-caption">
+                      Your wallet transactions
+                    </span>
+                  </div>
                 </div>
-              )}
+
+                {!isConnected ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">↔</div>
+                    <h4>Connect your wallet</h4>
+                    <p>
+                      Your recent transactions will appear here after
+                      connecting your wallet.
+                    </p>
+                    <AppKitButton />
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon">✓</div>
+                    <h4>No recent transactions</h4>
+                    <p>
+                      Confirmed wallet activity will appear here.
+                    </p>
+                  </div>
+                )}
+              </div>
             </section>
           </>
         )}
 
-        <section className="panel security-panel">
-          <h2>Security Notice</h2>
-          <p>
-            Nova Wallet never asks for your private key or Secret Recovery
-            Phrase. This version uses demo trading only. No real funds are
-            transferred.
-          </p>
-        </section>
-      </main>
+        {activePage === "Markets" && (
+          <section className="simple-page panel">
+            <div className="panel-header">
+              <div>
+                <h2>Markets</h2>
+                <span className="panel-caption">
+                  Live market prices
+                </span>
+              </div>
+            </div>
 
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onLogin={handleLogin}
-        />
+            <div className="markets-table">
+              <div className="table-row table-head">
+                <span>Asset</span>
+                <span>Price</span>
+                <span>24h Change</span>
+                <span>24h Volume</span>
+              </div>
+
+              {markets.map((market) => {
+                const data = prices[market.symbol];
+
+                return (
+                  <div className="table-row" key={market.symbol}>
+                    <span className="asset-cell">
+                      <span className="coin-icon">{market.icon}</span>
+                      <strong>{market.pair}</strong>
+                    </span>
+                    <span>
+                      {data ? `$${formatNumber(data.price, 2)}` : "—"}
+                    </span>
+                    <span className={data?.change >= 0 ? "positive" : "negative"}>
+                      {data
+                        ? `${data.change >= 0 ? "+" : ""}${formatNumber(data.change, 2)}%`
+                        : "—"}
+                    </span>
+                    <span>
+                      {data ? `$${formatNumber(data.volume, 0)}` : "—"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {activePage === "Portfolio" && (
+          <section className="simple-page panel">
+            <div className="panel-header">
+              <div>
+                <h2>Portfolio</h2>
+                <span className="panel-caption">
+                  Assets held by your connected wallet
+                </span>
+              </div>
+            </div>
+
+            {!isConnected ? (
+              <div className="portfolio-empty">
+                <h3>Connect your wallet to view your portfolio</h3>
+                <p>
+                  Nova Wallet does not hold your funds. Your assets remain
+                  in your own wallet.
+                </p>
+                <AppKitButton />
+              </div>
+            ) : (
+              <div className="wallet-summary">
+                <div className="wallet-address">
+                  {shortenAddress(address)}
+                </div>
+                <div className="wallet-balance">
+                  {walletBalance
+                    ? `${formatNumber(
+                        Number(walletBalance.formatted),
+                        5
+                      )} ${walletBalance.symbol}`
+                    : "Loading balance..."}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {activePage === "Activity" && (
+          <section className="simple-page panel">
+            <div className="panel-header">
+              <div>
+                <h2>Activity</h2>
+                <span className="panel-caption">
+                  Blockchain transaction history
+                </span>
+              </div>
+            </div>
+
+            <div className="portfolio-empty">
+              <h3>No transaction activity yet</h3>
+              <p>
+                Transactions will appear after you connect a wallet and
+                complete an on-chain action.
+              </p>
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function SwapPanel({
+  selectedMarket,
+  selectedPrice,
+  fromAmount,
+  setFromAmount,
+  toToken,
+  setToToken,
+  estimatedOutput,
+  isConnected,
+  walletBalance,
+  onReview,
+  swapMessage,
+}) {
+  return (
+    <div className="swap-panel panel">
+      <div className="panel-header">
+        <div>
+          <h2>Swap</h2>
+          <span className="panel-caption">
+            Exchange tokens from your wallet
+          </span>
+        </div>
+
+        <button className="settings-button">⚙</button>
+      </div>
+
+      <div className="swap-box">
+        <div className="swap-box-top">
+          <span>From</span>
+          <span className="balance-text">
+            Balance:{" "}
+            {walletBalance
+              ? `${formatNumber(Number(walletBalance.formatted), 5)} ${
+                  walletBalance.symbol
+                }`
+              : "—"}
+          </span>
+        </div>
+
+        <div className="token-input-row">
+          <input
+            type="number"
+            min="0"
+            placeholder="0.00"
+            value={fromAmount}
+            onChange={(event) => setFromAmount(event.target.value)}
+          />
+
+          <button className="token-selector">
+            <span className="coin-icon">{selectedMarket.icon}</span>
+            {selectedMarket.short}
+            <span>⌄</span>
+          </button>
+        </div>
+      </div>
+
+      <button className="swap-direction" title="Reverse tokens">
+        ⇅
+      </button>
+
+      <div className="swap-box">
+        <div className="swap-box-top">
+          <span>To</span>
+          <span className="balance-text">Balance: —</span>
+        </div>
+
+        <div className="token-input-row">
+          <input
+            type="text"
+            placeholder="0.00"
+            value={
+              estimatedOutput
+                ? formatNumber(estimatedOutput, 2)
+                : ""
+            }
+            readOnly
+          />
+
+          <select
+            className="token-selector select-token"
+            value={toToken}
+            onChange={(event) => setToToken(event.target.value)}
+          >
+            <option value="USDC">USDC</option>
+            <option value="USDT">USDT</option>
+            <option value="DAI">DAI</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="swap-details">
+        <div>
+          <span>Exchange rate</span>
+          <strong>
+            {selectedPrice
+              ? `1 ${selectedMarket.short} ≈ $${formatNumber(
+                  selectedPrice,
+                  2
+                )}`
+              : "—"}
+          </strong>
+        </div>
+
+        <div>
+          <span>Price impact</span>
+          <strong>—</strong>
+        </div>
+
+        <div>
+          <span>Minimum received</span>
+          <strong>—</strong>
+        </div>
+
+        <div>
+          <span>Network fee</span>
+          <strong>Calculated before confirmation</strong>
+        </div>
+      </div>
+
+      {swapMessage && (
+        <div className="swap-message">{swapMessage}</div>
       )}
+
+      <button className="primary-action" onClick={onReview}>
+        {isConnected ? "Review Swap" : "Connect Wallet to Swap"}
+      </button>
+
+      <p className="swap-disclaimer">
+        You control the transaction. Nova Wallet never asks for your
+        private key or recovery phrase.
+      </p>
+    </div>
+  );
+}
+
+function PriceChart({ data, isLoading }) {
+  const width = 900;
+  const height = 390;
+  const padding = {
+    top: 28,
+    right: 70,
+    bottom: 34,
+    left: 18,
+  };
+
+  if (isLoading) {
+    return (
+      <div className="chart-loading">
+        <div className="loading-spinner"></div>
+        Loading market chart...
+      </div>
+    );
+  }
+
+  if (!data.length) {
+    return (
+      <div className="chart-loading">
+        Market chart is temporarily unavailable.
+      </div>
+    );
+  }
+
+  const values = data.map((item) => item.close);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const points = values
+    .map((value, index) => {
+      const x =
+        padding.left +
+        (index / (values.length - 1)) *
+          (width - padding.left - padding.right);
+
+      const y =
+        padding.top +
+        (1 - (value - min) / range) *
+          (height - padding.top - padding.bottom);
+
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  const lastValue = values[values.length - 1];
+  const lastX = width - padding.right;
+  const lastY =
+    padding.top +
+    (1 - (lastValue - min) / range) *
+      (height - padding.top - padding.bottom);
+
+  return (
+    <div className="chart-container">
+      <svg
+        className="price-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+      >
+        {[0, 1, 2, 3, 4].map((line) => {
+          const y =
+            padding.top +
+            (line / 4) * (height - padding.top - padding.bottom);
+
+          return (
+            <line
+              key={line}
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={y}
+              y2={y}
+              className="chart-grid-line"
+            />
+          );
+        })}
+
+        {[0, 1, 2, 3, 4].map((line) => {
+          const value = max - (line / 4) * range;
+
+          const y =
+            padding.top +
+            (line / 4) * (height - padding.top - padding.bottom);
+
+          return (
+            <text
+              key={`label-${line}`}
+              x={width - padding.right + 12}
+              y={y + 4}
+              className="chart-price-label"
+            >
+              {formatNumber(value, 2)}
+            </text>
+          );
+        })}
+
+        <polyline
+          points={points}
+          className="chart-line"
+          fill="none"
+        />
+
+        <line
+          x1={lastX}
+          x2={lastX}
+          y1={lastY}
+          y2={height - padding.bottom}
+          className="chart-current-line"
+        />
+
+        <circle
+          cx={lastX}
+          cy={lastY}
+          r="5"
+          className="chart-current-dot"
+        />
+
+        <rect
+          x={lastX - 62}
+          y={lastY - 14}
+          width="58"
+          height="25"
+          rx="4"
+          className="chart-current-label"
+        />
+
+        <text
+          x={lastX - 33}
+          y={lastY + 3}
+          textAnchor="middle"
+          className="chart-current-text"
+        >
+          {formatNumber(lastValue, 2)}
+        </text>
+      </svg>
     </div>
   );
 }
