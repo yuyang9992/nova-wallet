@@ -8,71 +8,8 @@ import { AppKitButton } from "@reown/appkit/react";
 
 import { wagmiAdapter, queryClient } from "./walletConfig";
 
-const projectId = "YOUR_REOWN_PROJECT_ID";
-
-const metadata = {
-  name: "Nova Wallet",
-  description: "Nova Wallet Crypto Dashboard",
-  url: window.location.origin,
-  icons: ["https://avatars.githubusercontent.com/u/179229932"]
-};
-
-const networks = [mainnet, polygon, arbitrum, optimism, base];
-
-const wagmiAdapter = new WagmiAdapter({
-  networks,
-  projectId
-});
-
-createAppKit({
-  adapters: [wagmiAdapter],
-  networks,
-  projectId,
-  metadata,
-  features: {
-    analytics: false
-  }
-});
-
-const queryClient = new QueryClient();
-
-function WalletConnection() {
-  const { address, isConnected, chain } = useAccount();
-  const { disconnect } = useDisconnect();
-
-  if (!isConnected) {
-    return (
-      <button
-        className="connect-wallet-button"
-        onClick={() => window.open("https://reown.com/appkit", "_blank")}
-      >
-        Connect Wallet
-      </button>
-    );
-  }
-
-  return (
-    <div className="connected-wallet">
-      <span className="wallet-network">
-        {chain?.name || "Connected"}
-      </span>
-
-      <span className="wallet-address">
-        {address?.slice(0, 6)}...{address?.slice(-4)}
-      </span>
-
-      <button
-        className="disconnect-button"
-        onClick={() => disconnect()}
-      >
-        Disconnect
-      </button>
-    </div>
-  );
-}
-
 function App() {
-  const [balance, setBalance] = useState(24580.75);
+  const [balance] = useState(24580.75);
 
   const transactions = [
     {
@@ -80,29 +17,29 @@ function App() {
       type: "Income",
       amount: "+$1,250.00",
       date: "Today, 10:24 AM",
-      icon: "₿"
+      icon: "₿",
     },
     {
       name: "USDT Deposit",
       type: "Income",
       amount: "+$850.00",
       date: "Yesterday, 4:15 PM",
-      icon: "₮"
+      icon: "₮",
     },
     {
       name: "Ethereum Transfer",
       type: "Expense",
       amount: "-$420.50",
       date: "Sep 08, 2026",
-      icon: "Ξ"
+      icon: "Ξ",
     },
     {
       name: "Bitcoin Purchase",
       type: "Expense",
       amount: "-$1,200.00",
       date: "Sep 06, 2026",
-      icon: "₿"
-    }
+      icon: "₿",
+    },
   ];
 
   return (
@@ -170,11 +107,11 @@ function App() {
             <button className="icon-button">⌕</button>
             <button className="icon-button">🔔</button>
 
-            <WalletConnection />
+            <AppKitButton />
           </div>
         </header>
 
-        <section className="balance-grid">
+        <section className="balance-grid" id="dashboard">
           <div className="balance-card">
             <div className="card-header">
               <span>Total Balance</span>
@@ -185,7 +122,7 @@ function App() {
               $
               {balance.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                maximumFractionDigits: 2,
               })}
             </div>
 
@@ -236,9 +173,7 @@ function App() {
                 <p>Manage your crypto assets</p>
               </div>
 
-              <button className="add-button">
-                + Add Wallet
-              </button>
+              <button className="add-button">+ Add Wallet</button>
             </div>
 
             <div className="wallet-list">
@@ -255,9 +190,7 @@ function App() {
                   <span>$11,842.20</span>
                 </div>
 
-                <div className="wallet-percent positive">
-                  +5.24%
-                </div>
+                <div className="wallet-percent positive">+5.24%</div>
               </div>
 
               <div className="wallet-item">
@@ -273,9 +206,7 @@ function App() {
                   <span>$6,720.80</span>
                 </div>
 
-                <div className="wallet-percent positive">
-                  +3.18%
-                </div>
+                <div className="wallet-percent positive">+3.18%</div>
               </div>
 
               <div className="wallet-item">
@@ -291,9 +222,7 @@ function App() {
                   <span>$5,240.00</span>
                 </div>
 
-                <div className="wallet-percent neutral">
-                  0.00%
-                </div>
+                <div className="wallet-percent neutral">0.00%</div>
               </div>
             </div>
           </div>
@@ -337,9 +266,7 @@ function App() {
               <p>Your latest wallet activity</p>
             </div>
 
-            <button className="view-all">
-              View all →
-            </button>
+            <button className="view-all">View all →</button>
           </div>
 
           <div className="transaction-table">
@@ -401,4 +328,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </WagmiProvider>
   </React.StrictMode>
 );
-const projectId = "a74f0ed553beed9257f071aecc9a2e08";
