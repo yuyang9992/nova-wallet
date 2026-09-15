@@ -1,64 +1,61 @@
 .live-chart-wrapper {
   width: 100%;
-  min-height: 420px;
-  padding: 20px 24px 16px;
+  min-height: 360px;
+  padding: 20px;
   box-sizing: border-box;
-  background: #0f1520;
-  border-radius: 0 0 16px 16px;
+  background: #0f1521;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .chart-top-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
-  color: #8fa4c7;
-  font-size: 13px;
+  margin-bottom: 15px;
+  color: #94a3b8;
+  font-size: 14px;
 }
 
 .chart-top-info strong {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .live-market-svg {
   display: block;
   width: 100%;
   height: 360px;
-  overflow: visible;
+  background:
+    linear-gradient(
+      rgba(38, 50, 70, 0.15) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(38, 50, 70, 0.15) 1px,
+      transparent 1px
+    );
+  background-size: 50px 50px;
+  border-radius: 8px;
 }
 
 .chart-footer {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  gap: 15px;
   margin-top: 15px;
-  color: #7185a8;
-  font-size: 11px;
+  color: #64748b;
+  font-size: 12px;
 }
 
 .chart-message {
-  min-height: 360px;
   display: flex;
-  align-items: center;
   justify-content: center;
-  color: #7185a8;
+  align-items: center;
+  min-height: 360px;
+  color: #94a3b8;
   font-size: 14px;
-  background: #0f1520;
-  border-radius: 0 0 16px 16px;
-}
-
-@media (max-width: 800px) {
-  .live-chart-wrapper {
-    padding: 16px 12px;
-  }
-
-  .live-market-svg {
-    height: 280px;
-  }
-
-  .chart-footer {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  background: #0f1521;
+  border-radius: 12px;
+  text-align: center;
 }
