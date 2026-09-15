@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./style.css";
 
-import { createAppKit } from "@reown/appkit/react";
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import { mainnet, polygon, arbitrum, optimism, base } from "@reown/appkit/networks";
-import { WagmiProvider, useAccount, useDisconnect } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider } from "wagmi";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { AppKitButton } from "@reown/appkit/react";
+
+import { wagmiAdapter, queryClient } from "./walletConfig";
 
 const projectId = "YOUR_REOWN_PROJECT_ID";
 
