@@ -2,6 +2,75 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./style.css";
 
+import { createAppKit } from "@reown/appkit/react";
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { mainnet, polygon, arbitrum, optimism, base } from "@reown/appkit/networks";
+import { WagmiProvider, useAccount, useDisconnect } from "wagmi";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const projectId = "YOUR_REOWN_PROJECT_ID";
+
+const metadata = {
+  name: "Nova Wallet",
+  description: "Nova Wallet Crypto Dashboard",
+  url: window.location.origin,
+  icons: ["https://avatars.githubusercontent.com/u/179229932"]
+};
+
+const networks = [mainnet, polygon, arbitrum, optimism, base];
+
+const wagmiAdapter = new WagmiAdapter({
+  networks,
+  projectId
+});
+
+createAppKit({
+  adapters: [wagmiAdapter],
+  networks,
+  projectId,
+  metadata,
+  features: {
+    analytics: false
+  }
+});
+
+const queryClient = new QueryClient();
+
+function WalletConnection() {
+  const { address, isConnected, chain } = useAccount();
+  const { disconnect } = useDisconnect();
+
+  if (!isConnected) {
+    return (
+      <button
+        className="connect-wallet-button"
+        onClick={() => window.open("https://reown.com/appkit", "_blank")}
+      >
+        Connect Wallet
+      </button>
+    );
+  }
+
+  return (
+    <div className="connected-wallet">
+      <span className="wallet-network">
+        {chain?.name || "Connected"}
+      </span>
+
+      <span className="wallet-address">
+        {address?.slice(0, 6)}...{address?.slice(-4)}
+      </span>
+
+      <button
+        className="disconnect-button"
+        onClick={() => disconnect()}
+      >
+        Disconnect
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const [balance, setBalance] = useState(24580.75);
 
@@ -11,29 +80,29 @@ function App() {
       type: "Income",
       amount: "+$1,250.00",
       date: "Today, 10:24 AM",
-      icon: "₿",
+      icon: "₿"
     },
     {
       name: "USDT Deposit",
       type: "Income",
       amount: "+$850.00",
       date: "Yesterday, 4:15 PM",
-      icon: "₮",
+      icon: "₮"
     },
     {
       name: "Ethereum Transfer",
       type: "Expense",
       amount: "-$420.50",
       date: "Sep 08, 2026",
-      icon: "Ξ",
+      icon: "Ξ"
     },
     {
       name: "Bitcoin Purchase",
       type: "Expense",
       amount: "-$1,200.00",
       date: "Sep 06, 2026",
-      icon: "₿",
-    },
+      icon: "₿"
+    }
   ];
 
   return (
@@ -49,14 +118,17 @@ function App() {
             <span>▦</span>
             Dashboard
           </a>
+
           <a className="nav-item" href="#wallets">
             <span>▣</span>
             My Wallets
           </a>
+
           <a className="nav-item" href="#transactions">
             <span>↔</span>
             Transactions
           </a>
+
           <a className="nav-item" href="#analytics">
             <span>◔</span>
             Analytics
@@ -68,6 +140,7 @@ function App() {
             <span>⚙</span>
             Settings
           </a>
+
           <a className="nav-item" href="#help">
             <span>?</span>
             Help Center
@@ -75,10 +148,12 @@ function App() {
 
           <div className="profile">
             <div className="avatar">YL</div>
+
             <div>
               <strong>Yuyang</strong>
               <small>Personal Account</small>
             </div>
+
             <span>⋮</span>
           </div>
         </div>
@@ -94,11 +169,8 @@ function App() {
           <div className="top-actions">
             <button className="icon-button">⌕</button>
             <button className="icon-button">🔔</button>
-            <button className="user-button">
-              <span className="avatar small">YL</span>
-              Yuyang
-              <span>⌄</span>
-            </button>
+
+            <WalletConnection />
           </div>
         </header>
 
@@ -110,9 +182,10 @@ function App() {
             </div>
 
             <div className="balance-amount">
-              ${balance.toLocaleString("en-US", {
+              $
+              {balance.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
+                maximumFractionDigits: 2
               })}
             </div>
 
@@ -123,6 +196,7 @@ function App() {
 
             <div className="balance-chart">
               <div className="chart-line"></div>
+
               <div className="chart-labels">
                 <span>Mon</span>
                 <span>Tue</span>
@@ -139,14 +213,18 @@ function App() {
             <div className="stat-icon purple">↗</div>
             <div className="stat-title">Total Income</div>
             <div className="stat-value">$8,450.00</div>
-            <div className="stat-positive">↗ 8.4% <span>vs last month</span></div>
+            <div className="stat-positive">
+              ↗ 8.4% <span>vs last month</span>
+            </div>
           </div>
 
           <div className="stat-card">
             <div className="stat-icon orange">↙</div>
             <div className="stat-title">Total Expenses</div>
             <div className="stat-value">$3,250.50</div>
-            <div className="stat-negative">↘ 3.2% <span>vs last month</span></div>
+            <div className="stat-negative">
+              ↘ 3.2% <span>vs last month</span>
+            </div>
           </div>
         </section>
 
@@ -157,47 +235,65 @@ function App() {
                 <h2>My Wallets</h2>
                 <p>Manage your crypto assets</p>
               </div>
-              <button className="add-button">+ Add Wallet</button>
+
+              <button className="add-button">
+                + Add Wallet
+              </button>
             </div>
 
             <div className="wallet-list">
               <div className="wallet-item">
                 <div className="coin-icon bitcoin">₿</div>
+
                 <div className="wallet-info">
                   <strong>Bitcoin</strong>
                   <span>BTC</span>
                 </div>
+
                 <div className="wallet-price">
                   <strong>0.1842 BTC</strong>
                   <span>$11,842.20</span>
                 </div>
-                <div className="wallet-percent positive">+5.24%</div>
+
+                <div className="wallet-percent positive">
+                  +5.24%
+                </div>
               </div>
 
               <div className="wallet-item">
                 <div className="coin-icon ethereum">Ξ</div>
+
                 <div className="wallet-info">
                   <strong>Ethereum</strong>
                   <span>ETH</span>
                 </div>
+
                 <div className="wallet-price">
                   <strong>2.450 ETH</strong>
                   <span>$6,720.80</span>
                 </div>
-                <div className="wallet-percent positive">+3.18%</div>
+
+                <div className="wallet-percent positive">
+                  +3.18%
+                </div>
               </div>
 
               <div className="wallet-item">
                 <div className="coin-icon tether">₮</div>
+
                 <div className="wallet-info">
                   <strong>Tether</strong>
                   <span>USDT</span>
                 </div>
+
                 <div className="wallet-price">
                   <strong>5,240.00 USDT</strong>
                   <span>$5,240.00</span>
                 </div>
-                <div className="wallet-percent neutral">0.00%</div>
+
+                <div className="wallet-percent neutral">
+                  0.00%
+                </div>
               </div>
             </div>
           </div>
@@ -215,14 +311,17 @@ function App() {
                 <span className="quick-icon deposit">↓</span>
                 <span>Deposit</span>
               </button>
+
               <button className="quick-action">
                 <span className="quick-icon withdraw">↑</span>
                 <span>Withdraw</span>
               </button>
+
               <button className="quick-action">
                 <span className="quick-icon send">↗</span>
                 <span>Send</span>
               </button>
+
               <button className="quick-action">
                 <span className="quick-icon receive">↙</span>
                 <span>Receive</span>
@@ -237,7 +336,10 @@ function App() {
               <h2>Recent Transactions</h2>
               <p>Your latest wallet activity</p>
             </div>
-            <button className="view-all">View all →</button>
+
+            <button className="view-all">
+              View all →
+            </button>
           </div>
 
           <div className="transaction-table">
@@ -251,9 +353,13 @@ function App() {
             {transactions.map((transaction, index) => (
               <div className="transaction-row" key={index}>
                 <div className="transaction-name">
-                  <div className="transaction-icon">{transaction.icon}</div>
+                  <div className="transaction-icon">
+                    {transaction.icon}
+                  </div>
+
                   <strong>{transaction.name}</strong>
                 </div>
+
                 <span
                   className={
                     transaction.type === "Income"
@@ -263,7 +369,11 @@ function App() {
                 >
                   {transaction.type}
                 </span>
-                <span className="transaction-date">{transaction.date}</span>
+
+                <span className="transaction-date">
+                  {transaction.date}
+                </span>
+
                 <strong
                   className={
                     transaction.type === "Income"
@@ -284,6 +394,11 @@ function App() {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </WagmiProvider>
   </React.StrictMode>
 );
+const projectId = "a74f0ed553beed9257f071aecc9a2e08";
